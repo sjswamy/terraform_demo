@@ -2,18 +2,40 @@
 # Start with a minimal pipeline that you can customize to build and deploy your code.
 # Add steps that build, run tests, deploy, and more:
 # https://aka.ms/yaml
-
 trigger:
-- main
+  branches:
+    include:
+      - main  # Replace with your default branch name
 
 pool:
-  vmImage: ubuntu-latest
+  vmImage: 'ubuntu-latest'  # Replace with the appropriate agent image for your environment
 
 steps:
-- script: echo Hello, world!
-  displayName: 'Run a one-line script'
+- script: |
+    # Install Terraform (if not already installed)
+    if [ ! -x "$(command -v terraform)" ]; then
+      wget https://releases.hashicorp.com/terraform/<TERRAFORM_VERSION>/terraform_<TERRAFORM_VERSION>_linux_amd64.zip
+      unzip terraform_<TERRAFORM_VERSION>_linux_amd64.zip
+      sudo mv terraform /usr/local/bin/
+    fi
+  displayName: 'Install Terraform'
+
+- checkout: self
 
 - script: |
-    echo Add other tasks to build, test, and deploy your project.
-    echo See https://aka.ms/yaml
-  displayName: 'Run a multi-line script'
+    # Initialize Terraform
+    terraform init
+  displayName: 'Terraform Init'
+
+- script: |
+    # Plan Terraform changes (optional)
+    terraform plan -out=tfplan
+  displayName: 'Terraform Plan'
+
+- script: |
+    # Apply Terraform changes
+    terraform apply -auto-approve tfplan
+  displayName: 'Terraform Apply'
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))  # Replace 'main' with your default branch name
+
+# Add additional steps as needed for other environments, e.g., Terraform destroy.
